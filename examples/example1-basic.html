@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Graph Structure - MAS Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --accent-cyan: #00d4ff;
+            --accent-violet: #8b5cf6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10, 10, 15, 0.9), transparent);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            position: fixed;
+            bottom: 32px;
+            left: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            min-width: 280px;
+        }
+
+        .info-panel h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent-cyan);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            font-weight: 500;
+        }
+
+        /* Controls hint */
+        .controls-hint {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            backdrop-filter: blur(20px);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .controls-hint p {
+            margin-bottom: 6px;
+        }
+
+        .controls-hint p:last-child {
+            margin-bottom: 0;
+        }
+
+        kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="header">
+        <a href="../index.html" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Examples
+        </a>
+        <div class="title">Basic Graph Structure</div>
+    </div>
+
+    <div class="info-panel">
+        <h3>◉ Graph Information</h3>
+        <div class="info-row">
+            <span class="info-label">Total Agents</span>
+            <span class="info-value" id="agent-count">6</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Connections</span>
+            <span class="info-value" id="edge-count">8</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Layout</span>
+            <span class="info-value">Circular 3D</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Camera Mode</span>
+            <span class="info-value">Manual</span>
+        </div>
+    </div>
+
+    <div class="controls-hint">
+        <p><kbd>Drag</kbd> Rotate camera</p>
+        <p><kbd>Scroll</kbd> Zoom in/out</p>
+        <p><kbd>Right drag</kbd> Pan view</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0f);
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(8, 6, 8);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 5;
+        controls.maxDistance = 30;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x00d4ff, 1, 50);
+        pointLight1.position.set(10, 10, 10);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0x8b5cf6, 0.8, 50);
+        pointLight2.position.set(-10, -5, -10);
+        scene.add(pointLight2);
+
+        // Grid helper (subtle)
+        const gridHelper = new THREE.GridHelper(20, 20, 0x1a1a2e, 0x1a1a2e);
+        gridHelper.position.y = -3;
+        scene.add(gridHelper);
+
+        // Agent data
+        const agents = [
+            { id: 'orchestrator', name: 'Orchestrator', position: new THREE.Vector3(0, 2, 0), color: 0x00d4ff },
+            { id: 'planner', name: 'Planner', position: new THREE.Vector3(3, 0, 0), color: 0x8b5cf6 },
+            { id: 'executor', name: 'Executor', position: new THREE.Vector3(1.5, 0, 2.6), color: 0xec4899 },
+            { id: 'validator', name: 'Validator', position: new THREE.Vector3(-1.5, 0, 2.6), color: 0x10b981 },
+            { id: 'memory', name: 'Memory', position: new THREE.Vector3(-3, 0, 0), color: 0xf59e0b },
+            { id: 'output', name: 'Output', position: new THREE.Vector3(0, -2, 0), color: 0x6366f1 }
+        ];
+
+        const edges = [
+            ['orchestrator', 'planner'],
+            ['orchestrator', 'executor'],
+            ['orchestrator', 'validator'],
+            ['orchestrator', 'memory'],
+            ['planner', 'executor'],
+            ['executor', 'validator'],
+            ['validator', 'output'],
+            ['memory', 'orchestrator']
+        ];
+
+        // Create agents (spheres)
+        const agentMeshes = {};
+        const agentGroup = new THREE.Group();
+
+        agents.forEach(agent => {
+            // Main sphere
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: agent.color,
+                metalness: 0.1,
+                roughness: 0.2,
+                emissive: agent.color,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.9
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(agent.position);
+
+            // Glow ring
+            const ringGeometry = new THREE.RingGeometry(0.6, 0.7, 32);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: agent.color,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.copy(agent.position);
+            ring.rotation.x = Math.PI / 2;
+
+            agentMeshes[agent.id] = { sphere, ring, data: agent };
+            agentGroup.add(sphere);
+            agentGroup.add(ring);
+        });
+
+        scene.add(agentGroup);
+
+        // Create edges (lines)
+        const edgeLines = [];
+        edges.forEach(([fromId, toId]) => {
+            const from = agents.find(a => a.id === fromId);
+            const to = agents.find(a => a.id === toId);
+
+            const points = [from.position, to.position];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x3f3f5a,
+                transparent: true,
+                opacity: 0.6
+            });
+            const line = new THREE.Line(geometry, material);
+            edgeLines.push(line);
+            scene.add(line);
+        });
+
+        // Update info
+        document.getElementById('agent-count').textContent = agents.length;
+        document.getElementById('edge-count').textContent = edges.length;
+
+        // Animation
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            // Animate rings
+            Object.values(agentMeshes).forEach((mesh, i) => {
+                mesh.ring.rotation.z = time + i * 0.5;
+                mesh.ring.scale.setScalar(1 + Math.sin(time * 2 + i) * 0.1);
+            });
+
+            // Subtle floating animation for agents
+            Object.values(agentMeshes).forEach((mesh, i) => {
+                mesh.sphere.position.y = mesh.data.position.y + Math.sin(time * 1.5 + i * 0.7) * 0.1;
+                mesh.ring.position.y = mesh.sphere.position.y;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

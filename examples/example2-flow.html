@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Animation - MAS Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --accent-cyan: #00d4ff;
+            --accent-violet: #8b5cf6;
+            --accent-magenta: #ec4899;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10, 10, 15, 0.9), transparent);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            position: fixed;
+            top: 80px;
+            right: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            min-width: 260px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--accent-violet);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-primary);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn.active {
+            background: var(--accent-violet);
+            border-color: var(--accent-violet);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider-value {
+            font-size: 13px;
+            font-weight: 500;
+            min-width: 36px;
+            text-align: right;
+        }
+
+        /* Status Panel */
+        .status-panel {
+            position: fixed;
+            bottom: 32px;
+            left: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            min-width: 280px;
+        }
+
+        .status-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent-cyan);
+        }
+
+        .flow-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .flow-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .flow-text {
+            font-size: 13px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 13px;
+        }
+
+        .status-label {
+            color: var(--text-secondary);
+        }
+
+        .status-value {
+            font-weight: 500;
+        }
+
+        .status-value.active {
+            color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="header">
+        <a href="../index.html" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Examples
+        </a>
+        <div class="title">Flow Animation</div>
+    </div>
+
+    <div class="control-panel">
+        <div class="panel-title">
+            <span>◈</span> Flow Controls
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Flow Mode</label>
+            <div class="btn-group">
+                <button class="btn" id="btn-pause">Pause</button>
+                <button class="btn active" id="btn-auto">Auto</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Animation Speed</label>
+            <div class="slider-container">
+                <input type="range" class="slider" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
+                <span class="slider-value" id="speed-value">1.0x</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Node Delay (seconds)</label>
+            <div class="slider-container">
+                <input type="range" class="slider" id="delay-slider" min="1" max="10" step="0.5" value="3">
+                <span class="slider-value" id="delay-value">3.0s</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-title">◉ Flow Status</div>
+
+        <div class="flow-indicator">
+            <div class="flow-dot"></div>
+            <span class="flow-text" id="flow-status">Flow active</span>
+        </div>
+
+        <div class="status-row">
+            <span class="status-label">Current Node</span>
+            <span class="status-value active" id="current-node">Orchestrator</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">Next Node</span>
+            <span class="status-value" id="next-node">Planner</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">Step</span>
+            <span class="status-value" id="current-step">1 / 6</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0f);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(10, 8, 10);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x00d4ff, 1.2, 50);
+        pointLight1.position.set(10, 10, 10);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0x8b5cf6, 1, 50);
+        pointLight2.position.set(-10, -5, -10);
+        scene.add(pointLight2);
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(20, 20, 0x1a1a2e, 0x1a1a2e);
+        gridHelper.position.y = -3;
+        scene.add(gridHelper);
+
+        // Agent data with flow sequence
+        const agents = [
+            { id: 'orchestrator', name: 'Orchestrator', position: new THREE.Vector3(0, 2, 0), color: 0x00d4ff },
+            { id: 'planner', name: 'Planner', position: new THREE.Vector3(4, 0, 0), color: 0x8b5cf6 },
+            { id: 'executor', name: 'Executor', position: new THREE.Vector3(2, 0, 3.5), color: 0xec4899 },
+            { id: 'validator', name: 'Validator', position: new THREE.Vector3(-2, 0, 3.5), color: 0x10b981 },
+            { id: 'memory', name: 'Memory', position: new THREE.Vector3(-4, 0, 0), color: 0xf59e0b },
+            { id: 'output', name: 'Output', position: new THREE.Vector3(0, -2, 0), color: 0x6366f1 }
+        ];
+
+        const flowSequence = [
+            'orchestrator', 'planner', 'executor', 'validator', 'memory', 'output'
+        ];
+
+        const edges = [
+            ['orchestrator', 'planner'],
+            ['planner', 'executor'],
+            ['executor', 'validator'],
+            ['validator', 'memory'],
+            ['memory', 'output'],
+            ['output', 'orchestrator']
+        ];
+
+        // Create agents
+        const agentMeshes = {};
+        const agentGroup = new THREE.Group();
+
+        agents.forEach(agent => {
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: agent.color,
+                metalness: 0.1,
+                roughness: 0.2,
+                emissive: agent.color,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                opacity: 0.7
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(agent.position);
+
+            // Outer glow
+            const glowGeometry = new THREE.SphereGeometry(0.65, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: agent.color,
+                transparent: true,
+                opacity: 0.15
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.copy(agent.position);
+
+            agentMeshes[agent.id] = {
+                sphere,
+                glow,
+                material,
+                glowMaterial,
+                data: agent,
+                baseEmissive: 0.2,
+                baseOpacity: 0.7
+            };
+            agentGroup.add(sphere);
+            agentGroup.add(glow);
+        });
+
+        scene.add(agentGroup);
+
+        // Create edges
+        const edgeMeshes = {};
+        edges.forEach(([fromId, toId]) => {
+            const from = agents.find(a => a.id === fromId);
+            const to = agents.find(a => a.id === toId);
+
+            const points = [from.position, to.position];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x3f3f5a,
+                transparent: true,
+                opacity: 0.4
+            });
+            const line = new THREE.Line(geometry, material);
+            edgeMeshes[`${fromId}-${toId}`] = { line, material };
+            scene.add(line);
+        });
+
+        // Flow particle
+        const particleGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const particleMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00d4ff,
+            transparent: true,
+            opacity: 0.9
+        });
+        const flowParticle = new THREE.Mesh(particleGeometry, particleMaterial);
+        flowParticle.visible = false;
+        scene.add(flowParticle);
+
+        // Flow state
+        let isAutoMode = true;
+        let animationSpeed = 1;
+        let nodeDelay = 3;
+        let currentFlowIndex = 0;
+        let flowProgress = 0;
+        let isTransitioning = false;
+        let lastTime = 0;
+
+        // UI Elements
+        const btnPause = document.getElementById('btn-pause');
+        const btnAuto = document.getElementById('btn-auto');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const delaySlider = document.getElementById('delay-slider');
+        const delayValue = document.getElementById('delay-value');
+        const flowStatus = document.getElementById('flow-status');
+        const currentNodeEl = document.getElementById('current-node');
+        const nextNodeEl = document.getElementById('next-node');
+        const currentStepEl = document.getElementById('current-step');
+
+        // Event listeners
+        btnPause.addEventListener('click', () => {
+            isAutoMode = false;
+            btnPause.classList.add('active');
+            btnAuto.classList.remove('active');
+            flowStatus.textContent = 'Paused';
+        });
+
+        btnAuto.addEventListener('click', () => {
+            isAutoMode = true;
+            btnAuto.classList.add('active');
+            btnPause.classList.remove('active');
+            flowStatus.textContent = 'Flow active';
+        });
+
+        speedSlider.addEventListener('input', (e) => {
+            animationSpeed = parseFloat(e.target.value);
+            speedValue.textContent = animationSpeed.toFixed(1) + 'x';
+        });
+
+        delaySlider.addEventListener('input', (e) => {
+            nodeDelay = parseFloat(e.target.value);
+            delayValue.textContent = nodeDelay.toFixed(1) + 's';
+        });
+
+        // Update UI
+        function updateUI() {
+            const currentNode = agents.find(a => a.id === flowSequence[currentFlowIndex]);
+            const nextIndex = (currentFlowIndex + 1) % flowSequence.length;
+            const nextNode = agents.find(a => a.id === flowSequence[nextIndex]);
+
+            currentNodeEl.textContent = currentNode.name;
+            nextNodeEl.textContent = nextNode.name;
+            currentStepEl.textContent = `${currentFlowIndex + 1} / ${flowSequence.length}`;
+        }
+
+        // Highlight active node
+        function highlightNode(nodeId, active) {
+            const mesh = agentMeshes[nodeId];
+            if (mesh) {
+                if (active) {
+                    mesh.material.emissiveIntensity = 0.8;
+                    mesh.material.opacity = 1;
+                    mesh.glowMaterial.opacity = 0.4;
+                    mesh.sphere.scale.setScalar(1.2);
+                    mesh.glow.scale.setScalar(1.3);
+                } else {
+                    mesh.material.emissiveIntensity = mesh.baseEmissive;
+                    mesh.material.opacity = mesh.baseOpacity;
+                    mesh.glowMaterial.opacity = 0.15;
+                    mesh.sphere.scale.setScalar(1);
+                    mesh.glow.scale.setScalar(1);
+                }
+            }
+        }
+
+        // Highlight edge
+        function highlightEdge(fromId, toId, active) {
+            const key = `${fromId}-${toId}`;
+            const edge = edgeMeshes[key];
+            if (edge) {
+                if (active) {
+                    edge.material.color.setHex(0x00d4ff);
+                    edge.material.opacity = 1;
+                } else {
+                    edge.material.color.setHex(0x3f3f5a);
+                    edge.material.opacity = 0.4;
+                }
+            }
+        }
+
+        // Animation
+        let time = 0;
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            time += 0.01;
+
+            if (isAutoMode && deltaTime < 0.1) {
+                flowProgress += deltaTime * animationSpeed;
+
+                const currentNodeId = flowSequence[currentFlowIndex];
+                const nextIndex = (currentFlowIndex + 1) % flowSequence.length;
+                const nextNodeId = flowSequence[nextIndex];
+
+                // During delay at node
+                if (flowProgress < nodeDelay) {
+                    highlightNode(currentNodeId, true);
+                    flowParticle.visible = false;
+                    isTransitioning = false;
+                }
+                // Transitioning to next node
+                else if (flowProgress < nodeDelay + 1) {
+                    if (!isTransitioning) {
+                        isTransitioning = true;
+                        highlightEdge(currentNodeId, nextNodeId, true);
+                    }
+
+                    const t = (flowProgress - nodeDelay);
+                    const from = agents.find(a => a.id === currentNodeId).position;
+                    const to = agents.find(a => a.id === nextNodeId).position;
+
+                    flowParticle.position.lerpVectors(from, to, t);
+                    flowParticle.visible = true;
+
+                    // Update particle color based on target
+                    const targetAgent = agents.find(a => a.id === nextNodeId);
+                    particleMaterial.color.setHex(targetAgent.color);
+                }
+                // Move to next node
+                else {
+                    highlightNode(currentNodeId, false);
+                    highlightEdge(currentNodeId, nextNodeId, false);
+                    currentFlowIndex = nextIndex;
+                    flowProgress = 0;
+                    updateUI();
+                }
+            }
+
+            // Ambient animations
+            Object.values(agentMeshes).forEach((mesh, i) => {
+                mesh.sphere.position.y = mesh.data.position.y + Math.sin(time * 1.5 + i * 0.7) * 0.08;
+                mesh.glow.position.y = mesh.sphere.position.y;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        updateUI();
+        animate(0);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

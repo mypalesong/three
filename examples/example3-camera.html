@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Controls - MAS Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --accent-cyan: #00d4ff;
+            --accent-violet: #8b5cf6;
+            --accent-magenta: #ec4899;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10, 10, 15, 0.9), transparent);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Camera Control Panel */
+        .control-panel {
+            position: fixed;
+            top: 80px;
+            right: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            min-width: 300px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--accent-magenta);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 24px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-label span {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-primary);
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn.active {
+            background: var(--accent-magenta);
+            border-color: var(--accent-magenta);
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent-magenta);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        .slider-value {
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: right;
+            color: var(--accent-magenta);
+        }
+
+        /* Speed presets */
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .preset-btn {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .preset-btn.active {
+            background: rgba(236, 72, 153, 0.2);
+            border-color: var(--accent-magenta);
+            color: var(--accent-magenta);
+        }
+
+        /* Camera Info */
+        .camera-info {
+            position: fixed;
+            bottom: 32px;
+            left: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            min-width: 260px;
+        }
+
+        .info-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent-cyan);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            font-weight: 500;
+            font-family: 'SF Mono', monospace;
+        }
+
+        /* Reset button */
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-primary);
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 16px;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="header">
+        <a href="../index.html" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Examples
+        </a>
+        <div class="title">Camera Controls</div>
+    </div>
+
+    <div class="control-panel">
+        <div class="panel-title">
+            <span>◎</span> Camera Settings
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">Rotation Mode</label>
+            <div class="btn-group">
+                <button class="btn active" id="btn-manual">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Manual
+                </button>
+                <button class="btn" id="btn-auto">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                        <path d="M21 3v5h-5"/>
+                    </svg>
+                    Auto
+                </button>
+            </div>
+        </div>
+
+        <div class="control-group" id="speed-control" style="opacity: 0.5; pointer-events: none;">
+            <div class="control-label">
+                Rotation Speed
+                <span id="speed-display">1.0x</span>
+            </div>
+            <div class="slider-container">
+                <input type="range" class="slider" id="speed-slider" min="0.1" max="10" step="0.1" value="1">
+                <span class="slider-value" id="speed-value">1.0x</span>
+            </div>
+            <div class="preset-buttons">
+                <button class="preset-btn" data-speed="0.1">0.1x</button>
+                <button class="preset-btn" data-speed="0.5">0.5x</button>
+                <button class="preset-btn active" data-speed="1">1x</button>
+                <button class="preset-btn" data-speed="2">2x</button>
+                <button class="preset-btn" data-speed="3">3x</button>
+                <button class="preset-btn" data-speed="5">5x</button>
+                <button class="preset-btn" data-speed="7">7x</button>
+                <button class="preset-btn" data-speed="10">10x</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label">
+                Camera Distance
+                <span id="distance-display">15</span>
+            </div>
+            <div class="slider-container">
+                <input type="range" class="slider" id="distance-slider" min="5" max="40" step="1" value="15">
+                <span class="slider-value" id="distance-value">15</span>
+            </div>
+        </div>
+
+        <button class="reset-btn" id="reset-btn">Reset Camera Position</button>
+    </div>
+
+    <div class="camera-info">
+        <div class="info-title">◉ Camera Position</div>
+        <div class="info-row">
+            <span class="info-label">X</span>
+            <span class="info-value" id="cam-x">10.00</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Y</span>
+            <span class="info-value" id="cam-y">8.00</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Z</span>
+            <span class="info-value" id="cam-z">10.00</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Distance</span>
+            <span class="info-value" id="cam-dist">16.12</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0f);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(10, 8, 10);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 5;
+        controls.maxDistance = 40;
+        controls.autoRotate = false;
+        controls.autoRotateSpeed = 2;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x00d4ff, 1.2, 50);
+        pointLight1.position.set(10, 10, 10);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xec4899, 1, 50);
+        pointLight2.position.set(-10, -5, -10);
+        scene.add(pointLight2);
+
+        const pointLight3 = new THREE.PointLight(0x8b5cf6, 0.8, 50);
+        pointLight3.position.set(0, 15, 0);
+        scene.add(pointLight3);
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(30, 30, 0x1a1a2e, 0x1a1a2e);
+        gridHelper.position.y = -4;
+        scene.add(gridHelper);
+
+        // Agent data - More complex layout for camera demo
+        const agents = [
+            { id: 'central', name: 'Central', position: new THREE.Vector3(0, 0, 0), color: 0x00d4ff },
+            { id: 'agent1', name: 'Agent 1', position: new THREE.Vector3(5, 2, 0), color: 0x8b5cf6 },
+            { id: 'agent2', name: 'Agent 2', position: new THREE.Vector3(3.5, 2, 3.5), color: 0xec4899 },
+            { id: 'agent3', name: 'Agent 3', position: new THREE.Vector3(0, 2, 5), color: 0x10b981 },
+            { id: 'agent4', name: 'Agent 4', position: new THREE.Vector3(-3.5, 2, 3.5), color: 0xf59e0b },
+            { id: 'agent5', name: 'Agent 5', position: new THREE.Vector3(-5, 2, 0), color: 0x6366f1 },
+            { id: 'agent6', name: 'Agent 6', position: new THREE.Vector3(-3.5, 2, -3.5), color: 0xef4444 },
+            { id: 'agent7', name: 'Agent 7', position: new THREE.Vector3(0, 2, -5), color: 0x14b8a6 },
+            { id: 'agent8', name: 'Agent 8', position: new THREE.Vector3(3.5, 2, -3.5), color: 0xa855f7 },
+            { id: 'top', name: 'Top', position: new THREE.Vector3(0, 5, 0), color: 0xfbbf24 },
+            { id: 'bottom', name: 'Bottom', position: new THREE.Vector3(0, -3, 0), color: 0x64748b }
+        ];
+
+        const edges = [
+            ['central', 'agent1'], ['central', 'agent2'], ['central', 'agent3'],
+            ['central', 'agent4'], ['central', 'agent5'], ['central', 'agent6'],
+            ['central', 'agent7'], ['central', 'agent8'],
+            ['central', 'top'], ['central', 'bottom'],
+            ['agent1', 'agent2'], ['agent2', 'agent3'], ['agent3', 'agent4'],
+            ['agent4', 'agent5'], ['agent5', 'agent6'], ['agent6', 'agent7'],
+            ['agent7', 'agent8'], ['agent8', 'agent1'],
+            ['top', 'agent1'], ['top', 'agent3'], ['top', 'agent5'], ['top', 'agent7'],
+            ['bottom', 'agent2'], ['bottom', 'agent4'], ['bottom', 'agent6'], ['bottom', 'agent8']
+        ];
+
+        // Create agents
+        const agentMeshes = {};
+        agents.forEach(agent => {
+            const geometry = new THREE.SphereGeometry(0.4, 32, 32);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: agent.color,
+                metalness: 0.2,
+                roughness: 0.2,
+                emissive: agent.color,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.9
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(agent.position);
+
+            // Glow
+            const glowGeometry = new THREE.SphereGeometry(0.55, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: agent.color,
+                transparent: true,
+                opacity: 0.2
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.copy(agent.position);
+
+            agentMeshes[agent.id] = { sphere, glow, data: agent };
+            scene.add(sphere);
+            scene.add(glow);
+        });
+
+        // Create edges
+        edges.forEach(([fromId, toId]) => {
+            const from = agents.find(a => a.id === fromId);
+            const to = agents.find(a => a.id === toId);
+
+            const points = [from.position, to.position];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x3f3f5a,
+                transparent: true,
+                opacity: 0.4
+            });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+        });
+
+        // State
+        let autoRotate = false;
+        let rotationSpeed = 1;
+
+        // UI Elements
+        const btnManual = document.getElementById('btn-manual');
+        const btnAuto = document.getElementById('btn-auto');
+        const speedControl = document.getElementById('speed-control');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const distanceSlider = document.getElementById('distance-slider');
+        const distanceValue = document.getElementById('distance-value');
+        const resetBtn = document.getElementById('reset-btn');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+
+        const camX = document.getElementById('cam-x');
+        const camY = document.getElementById('cam-y');
+        const camZ = document.getElementById('cam-z');
+        const camDist = document.getElementById('cam-dist');
+
+        // Event handlers
+        btnManual.addEventListener('click', () => {
+            autoRotate = false;
+            controls.autoRotate = false;
+            btnManual.classList.add('active');
+            btnAuto.classList.remove('active');
+            speedControl.style.opacity = '0.5';
+            speedControl.style.pointerEvents = 'none';
+        });
+
+        btnAuto.addEventListener('click', () => {
+            autoRotate = true;
+            controls.autoRotate = true;
+            btnAuto.classList.add('active');
+            btnManual.classList.remove('active');
+            speedControl.style.opacity = '1';
+            speedControl.style.pointerEvents = 'auto';
+        });
+
+        speedSlider.addEventListener('input', (e) => {
+            rotationSpeed = parseFloat(e.target.value);
+            controls.autoRotateSpeed = rotationSpeed * 2; // Base speed is 2
+            speedValue.textContent = rotationSpeed.toFixed(1) + 'x';
+
+            // Update preset buttons
+            presetBtns.forEach(btn => {
+                btn.classList.toggle('active', parseFloat(btn.dataset.speed) === rotationSpeed);
+            });
+        });
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const speed = parseFloat(btn.dataset.speed);
+                rotationSpeed = speed;
+                speedSlider.value = speed;
+                controls.autoRotateSpeed = speed * 2;
+                speedValue.textContent = speed.toFixed(1) + 'x';
+
+                presetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        distanceSlider.addEventListener('input', (e) => {
+            const distance = parseFloat(e.target.value);
+            distanceValue.textContent = distance;
+
+            // Calculate new camera position maintaining angle
+            const currentPos = camera.position.clone();
+            const length = currentPos.length();
+            camera.position.multiplyScalar(distance / length);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            camera.position.set(10, 8, 10);
+            controls.target.set(0, 0, 0);
+            distanceSlider.value = 15;
+            distanceValue.textContent = '15';
+        });
+
+        // Update camera info
+        function updateCameraInfo() {
+            camX.textContent = camera.position.x.toFixed(2);
+            camY.textContent = camera.position.y.toFixed(2);
+            camZ.textContent = camera.position.z.toFixed(2);
+
+            const distance = camera.position.length();
+            camDist.textContent = distance.toFixed(2);
+            distanceSlider.value = Math.min(40, Math.max(5, distance));
+            distanceValue.textContent = Math.round(distance);
+        }
+
+        // Animation
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            // Ambient animations
+            Object.values(agentMeshes).forEach((mesh, i) => {
+                mesh.sphere.position.y = mesh.data.position.y + Math.sin(time * 1.2 + i * 0.5) * 0.1;
+                mesh.glow.position.y = mesh.sphere.position.y;
+                mesh.glow.scale.setScalar(1 + Math.sin(time * 2 + i) * 0.15);
+            });
+
+            controls.update();
+            updateCameraInfo();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

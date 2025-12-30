@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Step-by-Step Flow - MAS Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --accent-cyan: #00d4ff;
+            --accent-violet: #8b5cf6;
+            --accent-green: #10b981;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10, 10, 15, 0.9), transparent);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Step Control Panel */
+        .control-panel {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px 32px;
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .step-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .step-btn {
+            width: 48px;
+            height: 48px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-primary);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .step-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .step-btn.primary {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            width: 64px;
+        }
+
+        .step-btn.primary:hover {
+            background: #0ea572;
+        }
+
+        .step-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .divider {
+            width: 1px;
+            height: 40px;
+            background: var(--border-color);
+        }
+
+        .step-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 200px;
+        }
+
+        .step-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .step-value {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px 32px;
+            backdrop-filter: blur(20px);
+            min-width: 500px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .progress-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+
+        .progress-step {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan));
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .node-list {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .node-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .node-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            background: transparent;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .node-dot.completed {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .node-dot.active {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+        }
+
+        .node-dot.active::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+        }
+
+        .node-dot svg {
+            width: 12px;
+            height: 12px;
+            color: white;
+        }
+
+        .node-name {
+            font-size: 11px;
+            color: var(--text-secondary);
+            transition: color 0.3s;
+        }
+
+        .node-item.active .node-name {
+            color: var(--accent-cyan);
+            font-weight: 500;
+        }
+
+        .node-item.completed .node-name {
+            color: var(--accent-green);
+        }
+
+        /* Side panel */
+        .side-panel {
+            position: fixed;
+            top: 200px;
+            right: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            min-width: 260px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--accent-cyan);
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            font-weight: 500;
+        }
+
+        .action-badge {
+            padding: 4px 10px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Keyboard hint */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        kbd {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: inherit;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="header">
+        <a href="../index.html" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Examples
+        </a>
+        <div class="title">Step-by-Step Flow</div>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-header">
+            <span class="progress-title">◇ Flow Progress</span>
+            <span class="progress-step" id="progress-text">Step 1 of 6</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="node-list" id="node-list">
+            <!-- Generated by JS -->
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="panel-title">◉ Current Step Details</div>
+        <div class="detail-row">
+            <span class="detail-label">Agent</span>
+            <span class="detail-value" id="detail-agent">Orchestrator</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Action</span>
+            <span class="action-badge" id="detail-action">Processing</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Previous</span>
+            <span class="detail-value" id="detail-prev">—</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Next</span>
+            <span class="detail-value" id="detail-next">Planner</span>
+        </div>
+    </div>
+
+    <div class="keyboard-hint">
+        Press <kbd>Space</kbd> or <kbd>→</kbd> for next step · <kbd>←</kbd> for previous · <kbd>R</kbd> to reset
+    </div>
+
+    <div class="control-panel">
+        <div class="step-controls">
+            <button class="step-btn" id="btn-reset" title="Reset">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                </svg>
+            </button>
+            <button class="step-btn" id="btn-prev" title="Previous Step">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <button class="step-btn primary" id="btn-next" title="Next Step">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="step-info">
+            <span class="step-label">Current Agent</span>
+            <span class="step-value" id="current-agent">Orchestrator</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="step-info">
+            <span class="step-label">Flow Status</span>
+            <span class="step-value" id="flow-status">Ready</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0f);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(12, 8, 12);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x00d4ff, 1.2, 50);
+        pointLight1.position.set(10, 10, 10);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0x10b981, 1, 50);
+        pointLight2.position.set(-10, -5, -10);
+        scene.add(pointLight2);
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(20, 20, 0x1a1a2e, 0x1a1a2e);
+        gridHelper.position.y = -3;
+        scene.add(gridHelper);
+
+        // Agent data
+        const agents = [
+            { id: 'orchestrator', name: 'Orchestrator', position: new THREE.Vector3(0, 2, 0), color: 0x00d4ff, action: 'Coordinating' },
+            { id: 'planner', name: 'Planner', position: new THREE.Vector3(4, 0.5, 2), color: 0x8b5cf6, action: 'Planning' },
+            { id: 'executor', name: 'Executor', position: new THREE.Vector3(3, 0, -3), color: 0xec4899, action: 'Executing' },
+            { id: 'validator', name: 'Validator', position: new THREE.Vector3(-2, 0.5, -3), color: 0x10b981, action: 'Validating' },
+            { id: 'memory', name: 'Memory', position: new THREE.Vector3(-4, 0, 2), color: 0xf59e0b, action: 'Storing' },
+            { id: 'output', name: 'Output', position: new THREE.Vector3(0, -1.5, 0), color: 0x6366f1, action: 'Outputting' }
+        ];
+
+        const flowSequence = agents.map(a => a.id);
+
+        const edges = [
+            ['orchestrator', 'planner'],
+            ['planner', 'executor'],
+            ['executor', 'validator'],
+            ['validator', 'memory'],
+            ['memory', 'output'],
+            ['output', 'orchestrator']
+        ];
+
+        // Create agents
+        const agentMeshes = {};
+        agents.forEach(agent => {
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: agent.color,
+                metalness: 0.1,
+                roughness: 0.2,
+                emissive: agent.color,
+                emissiveIntensity: 0.15,
+                transparent: true,
+                opacity: 0.6
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(agent.position);
+
+            const glowGeometry = new THREE.SphereGeometry(0.65, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: agent.color,
+                transparent: true,
+                opacity: 0.1
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.copy(agent.position);
+
+            agentMeshes[agent.id] = { sphere, glow, material, glowMaterial, data: agent };
+            scene.add(sphere);
+            scene.add(glow);
+        });
+
+        // Create edges
+        const edgeMeshes = {};
+        edges.forEach(([fromId, toId]) => {
+            const from = agents.find(a => a.id === fromId);
+            const to = agents.find(a => a.id === toId);
+
+            const points = [from.position, to.position];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x2a2a3e,
+                transparent: true,
+                opacity: 0.4
+            });
+            const line = new THREE.Line(geometry, material);
+            edgeMeshes[`${fromId}-${toId}`] = { line, material };
+            scene.add(line);
+        });
+
+        // State
+        let currentStep = 0;
+        let completedSteps = [];
+
+        // Generate node list UI
+        const nodeListEl = document.getElementById('node-list');
+        agents.forEach((agent, i) => {
+            const item = document.createElement('div');
+            item.className = 'node-item';
+            item.id = `node-item-${i}`;
+            item.innerHTML = `
+                <div class="node-dot" id="node-dot-${i}"></div>
+                <span class="node-name">${agent.name}</span>
+            `;
+            nodeListEl.appendChild(item);
+        });
+
+        // UI Elements
+        const btnReset = document.getElementById('btn-reset');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const currentAgentEl = document.getElementById('current-agent');
+        const flowStatusEl = document.getElementById('flow-status');
+        const detailAgent = document.getElementById('detail-agent');
+        const detailAction = document.getElementById('detail-action');
+        const detailPrev = document.getElementById('detail-prev');
+        const detailNext = document.getElementById('detail-next');
+
+        // Update UI
+        function updateUI() {
+            const agent = agents[currentStep];
+            const prevAgent = currentStep > 0 ? agents[currentStep - 1] : null;
+            const nextAgent = currentStep < agents.length - 1 ? agents[currentStep + 1] : null;
+
+            // Progress
+            progressFill.style.width = `${(currentStep / (agents.length - 1)) * 100}%`;
+            progressText.textContent = `Step ${currentStep + 1} of ${agents.length}`;
+
+            // Current agent
+            currentAgentEl.textContent = agent.name;
+            flowStatusEl.textContent = currentStep === agents.length - 1 ? 'Complete' : 'In Progress';
+
+            // Details
+            detailAgent.textContent = agent.name;
+            detailAction.textContent = agent.action;
+            detailPrev.textContent = prevAgent ? prevAgent.name : '—';
+            detailNext.textContent = nextAgent ? nextAgent.name : '—';
+
+            // Node list
+            agents.forEach((_, i) => {
+                const item = document.getElementById(`node-item-${i}`);
+                const dot = document.getElementById(`node-dot-${i}`);
+
+                item.classList.remove('active', 'completed');
+                dot.classList.remove('active', 'completed');
+                dot.innerHTML = '';
+
+                if (i < currentStep) {
+                    item.classList.add('completed');
+                    dot.classList.add('completed');
+                    dot.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>';
+                } else if (i === currentStep) {
+                    item.classList.add('active');
+                    dot.classList.add('active');
+                }
+            });
+
+            // Button states
+            btnPrev.disabled = currentStep === 0;
+            btnNext.disabled = currentStep >= agents.length - 1;
+
+            // Highlight current agent mesh
+            Object.values(agentMeshes).forEach(mesh => {
+                mesh.material.emissiveIntensity = 0.15;
+                mesh.material.opacity = 0.6;
+                mesh.glowMaterial.opacity = 0.1;
+                mesh.sphere.scale.setScalar(1);
+                mesh.glow.scale.setScalar(1);
+            });
+
+            const currentMesh = agentMeshes[agent.id];
+            currentMesh.material.emissiveIntensity = 0.8;
+            currentMesh.material.opacity = 1;
+            currentMesh.glowMaterial.opacity = 0.4;
+            currentMesh.sphere.scale.setScalar(1.3);
+            currentMesh.glow.scale.setScalar(1.5);
+
+            // Highlight edges
+            Object.values(edgeMeshes).forEach(edge => {
+                edge.material.color.setHex(0x2a2a3e);
+                edge.material.opacity = 0.4;
+            });
+
+            if (currentStep > 0) {
+                const prevId = agents[currentStep - 1].id;
+                const currId = agent.id;
+                const edgeKey = `${prevId}-${currId}`;
+                if (edgeMeshes[edgeKey]) {
+                    edgeMeshes[edgeKey].material.color.setHex(0x10b981);
+                    edgeMeshes[edgeKey].material.opacity = 1;
+                }
+            }
+        }
+
+        // Event handlers
+        btnReset.addEventListener('click', () => {
+            currentStep = 0;
+            completedSteps = [];
+            updateUI();
+        });
+
+        btnPrev.addEventListener('click', () => {
+            if (currentStep > 0) {
+                currentStep--;
+                updateUI();
+            }
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (currentStep < agents.length - 1) {
+                completedSteps.push(currentStep);
+                currentStep++;
+                updateUI();
+            }
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowRight') {
+                e.preventDefault();
+                btnNext.click();
+            } else if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                btnPrev.click();
+            } else if (e.code === 'KeyR') {
+                e.preventDefault();
+                btnReset.click();
+            }
+        });
+
+        // Animation
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            // Ambient animation for current agent
+            const currentAgent = agents[currentStep];
+            const mesh = agentMeshes[currentAgent.id];
+            mesh.sphere.position.y = currentAgent.position.y + Math.sin(time * 3) * 0.1;
+            mesh.glow.position.y = mesh.sphere.position.y;
+            mesh.glow.scale.setScalar(1.5 + Math.sin(time * 2) * 0.1);
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        updateUI();
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
