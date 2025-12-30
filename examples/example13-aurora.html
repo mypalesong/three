@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Borealis - MAS Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0a0a1a;
+            --bg-card: rgba(15, 15, 35, 0.9);
+            --border-color: rgba(100, 255, 200, 0.2);
+            --text-primary: #e0f0ff;
+            --text-secondary: rgba(224, 240, 255, 0.6);
+            --aurora-green: #00ff88;
+            --aurora-cyan: #00ffcc;
+            --aurora-purple: #aa66ff;
+            --aurora-pink: #ff66aa;
+        }
+
+        body {
+            font-family: 'Cormorant Garamond', serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #canvas-container { width: 100vw; height: 100vh; }
+
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10, 10, 26, 0.95), transparent);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--aurora-cyan);
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 400;
+            font-style: italic;
+            background: linear-gradient(90deg, var(--aurora-green), var(--aurora-cyan), var(--aurora-purple), var(--aurora-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .control-panel {
+            position: fixed;
+            top: 80px;
+            left: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            width: 280px;
+        }
+
+        .panel-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 500;
+            font-style: italic;
+            margin-bottom: 14px;
+            color: var(--aurora-cyan);
+        }
+
+        .btn-group { display: flex; gap: 8px; }
+
+        .btn {
+            padding: 12px 14px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 255, 200, 0.05);
+            color: var(--text-primary);
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            cursor: pointer;
+            transition: all 0.4s;
+            flex: 1;
+        }
+
+        .btn:hover { background: rgba(0, 255, 200, 0.1); }
+
+        .btn.active {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.3), rgba(170, 102, 255, 0.3));
+            border-color: var(--aurora-cyan);
+            box-shadow: 0 0 25px rgba(0, 255, 200, 0.2);
+        }
+
+        .slider-row { margin-top: 14px; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 10px; font-style: italic; }
+        .slider-label span:first-child { color: var(--text-secondary); }
+        .slider-label span:last-child { color: var(--aurora-green); }
+
+        .slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: linear-gradient(90deg, var(--aurora-green), var(--aurora-purple));
+            border-radius: 2px;
+            opacity: 0.5;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle, var(--aurora-cyan), var(--aurora-green));
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--aurora-cyan);
+        }
+
+        .step-controls { display: flex; gap: 10px; margin-top: 14px; }
+
+        .step-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 255, 200, 0.05);
+            color: var(--aurora-cyan);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-btn:hover:not(:disabled) { background: rgba(0, 255, 200, 0.15); }
+        .step-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .step-btn.primary { flex: 1; background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(170, 102, 255, 0.2)); }
+        .step-btn svg { width: 20px; height: 20px; }
+
+        .status-panel {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            width: 260px;
+        }
+
+        .status-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+
+        .status-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--aurora-green), var(--aurora-cyan));
+            box-shadow: 0 0 20px var(--aurora-green);
+            animation: aurora-pulse 3s ease-in-out infinite;
+        }
+
+        .status-dot.paused { animation: none; opacity: 0.5; }
+
+        @keyframes aurora-pulse {
+            0%, 100% { box-shadow: 0 0 20px var(--aurora-green); }
+            33% { box-shadow: 0 0 25px var(--aurora-cyan); }
+            66% { box-shadow: 0 0 20px var(--aurora-purple); }
+        }
+
+        .status-title { font-size: 16px; font-style: italic; color: var(--aurora-cyan); }
+        .status-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 15px; font-style: italic; }
+        .status-label { color: var(--text-secondary); }
+        .status-value { font-weight: 500; }
+        .status-value.highlight { color: var(--aurora-green); }
+
+        .progress-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border-color); }
+        .progress-bar { height: 6px; background: rgba(0, 255, 200, 0.1); border-radius: 3px; overflow: hidden; margin-top: 12px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--aurora-green), var(--aurora-cyan), var(--aurora-purple)); transition: width 0.5s ease; }
+
+        .flow-path {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 18px 24px;
+            backdrop-filter: blur(20px);
+        }
+
+        .path-title { font-size: 14px; font-style: italic; color: var(--aurora-purple); margin-bottom: 14px; }
+        .path-nodes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .path-node {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 255, 200, 0.03);
+            border: 1px solid transparent;
+            border-radius: 25px;
+            font-size: 14px;
+            font-style: italic;
+            opacity: 0.4;
+            transition: all 0.4s;
+        }
+
+        .path-node.visited { opacity: 1; border-color: var(--aurora-green); background: rgba(0, 255, 136, 0.1); }
+        .path-node.active { opacity: 1; border-color: var(--aurora-cyan); background: linear-gradient(135deg, rgba(0, 255, 200, 0.1), rgba(170, 102, 255, 0.1)); box-shadow: 0 0 20px rgba(0, 255, 200, 0.2); }
+        .path-arrow { color: var(--aurora-cyan); font-size: 16px; opacity: 0.3; }
+        .path-arrow.active { opacity: 1; }
+        .node-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="header">
+        <a href="../index.html" class="back-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Return</a>
+        <div class="title">Aurora Borealis</div>
+        <div></div>
+    </div>
+
+    <div class="control-panel">
+        <div class="panel-section">
+            <div class="section-title">Flow Control</div>
+            <div class="btn-group">
+                <button class="btn" id="btn-pause">Pause</button>
+                <button class="btn active" id="btn-auto">Flow</button>
+                <button class="btn" id="btn-manual">Step</button>
+            </div>
+            <div class="step-controls" id="step-controls" style="display: none;">
+                <button class="step-btn" id="btn-reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+                <button class="step-btn" id="btn-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="step-btn primary" id="btn-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="section-title">Timing</div>
+            <div class="slider-row">
+                <div class="slider-label"><span>Speed</span><span id="speed-value">1.0×</span></div>
+                <input type="range" class="slider" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+                <div class="slider-label"><span>Delay</span><span id="delay-value">3.0s</span></div>
+                <input type="range" class="slider" id="delay-slider" min="1" max="10" step="0.5" value="3">
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="section-title">Camera</div>
+            <div class="btn-group">
+                <button class="btn active" id="btn-cam-manual">Manual</button>
+                <button class="btn" id="btn-cam-auto">Drift</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-header">
+            <div class="status-dot" id="status-dot"></div>
+            <span class="status-title" id="status-title">Dancing</span>
+        </div>
+        <div class="status-row"><span class="status-label">Current</span><span class="status-value highlight" id="current-agent">Input</span></div>
+        <div class="status-row"><span class="status-label">Next</span><span class="status-value" id="next-agent">Orchestrator</span></div>
+        <div class="status-row"><span class="status-label">Step</span><span class="status-value" id="current-step">1 / 7</span></div>
+        <div class="progress-section">
+            <div class="slider-label"><span>Progress</span><span id="progress-percent">0%</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+        </div>
+    </div>
+
+    <div class="flow-path">
+        <div class="path-title">Light Path</div>
+        <div class="path-nodes" id="path-nodes"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a1a);
+        scene.fog = new THREE.Fog(0x0a0a1a, 15, 50);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(12, 10, 14);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Aurora-like lighting
+        const ambientLight = new THREE.AmbientLight(0x334466, 0.6);
+        scene.add(ambientLight);
+
+        const greenLight = new THREE.PointLight(0x00ff88, 1.5, 50);
+        greenLight.position.set(15, 20, 10);
+        scene.add(greenLight);
+
+        const cyanLight = new THREE.PointLight(0x00ffcc, 1.2, 40);
+        cyanLight.position.set(-15, 15, -10);
+        scene.add(cyanLight);
+
+        const purpleLight = new THREE.PointLight(0xaa66ff, 1, 35);
+        purpleLight.position.set(0, 10, 20);
+        scene.add(purpleLight);
+
+        const pinkLight = new THREE.PointLight(0xff66aa, 0.8, 30);
+        pinkLight.position.set(10, -5, -15);
+        scene.add(pinkLight);
+
+        const gridHelper = new THREE.GridHelper(40, 40, 0x00ff88, 0x1a2a3a);
+        gridHelper.position.y = -5;
+        gridHelper.material.opacity = 0.3;
+        gridHelper.material.transparent = true;
+        scene.add(gridHelper);
+
+        const agents = [
+            { id: 'input', name: 'Input', position: new THREE.Vector3(0, 4, 0), color: 0x00ff88 },
+            { id: 'orchestrator', name: 'Orchestrator', position: new THREE.Vector3(0, 1.5, 0), color: 0x00ffcc },
+            { id: 'planner', name: 'Planner', position: new THREE.Vector3(5, 0, 3), color: 0x66ffaa },
+            { id: 'executor', name: 'Executor', position: new THREE.Vector3(4, -1, -4), color: 0xaa66ff },
+            { id: 'validator', name: 'Validator', position: new THREE.Vector3(-4, -1, -4), color: 0xff66aa },
+            { id: 'memory', name: 'Memory', position: new THREE.Vector3(-5, 0, 3), color: 0x66aaff },
+            { id: 'output', name: 'Output', position: new THREE.Vector3(0, -3.5, 0), color: 0x00ffcc }
+        ];
+
+        const flowSequence = agents.map(a => a.id);
+        const edges = [['input', 'orchestrator'], ['orchestrator', 'planner'], ['planner', 'executor'], ['executor', 'validator'], ['validator', 'memory'], ['memory', 'orchestrator'], ['orchestrator', 'output']];
+
+        const pathNodes = document.getElementById('path-nodes');
+        agents.forEach((agent, i) => {
+            const node = document.createElement('div');
+            node.className = 'path-node';
+            node.id = `path-${i}`;
+            node.innerHTML = `<div class="node-dot" style="background: #${agent.color.toString(16).padStart(6, '0')}; color: #${agent.color.toString(16).padStart(6, '0')}"></div><span>${agent.name}</span>`;
+            pathNodes.appendChild(node);
+            if (i < agents.length - 1) {
+                const arrow = document.createElement('span');
+                arrow.className = 'path-arrow';
+                arrow.id = `arrow-${i}`;
+                arrow.textContent = '~';
+                pathNodes.appendChild(arrow);
+            }
+        });
+
+        const agentMeshes = {};
+        agents.forEach(agent => {
+            const geometry = new THREE.IcosahedronGeometry(0.45, 1);
+            const material = new THREE.MeshPhysicalMaterial({ color: agent.color, metalness: 0.2, roughness: 0.1, emissive: agent.color, emissiveIntensity: 0.4, transparent: true, opacity: 0.9 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(agent.position);
+
+            const glowGeometry = new THREE.IcosahedronGeometry(0.65, 1);
+            const glowMaterial = new THREE.MeshBasicMaterial({ color: agent.color, transparent: true, opacity: 0.2, wireframe: true });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.copy(agent.position);
+
+            agentMeshes[agent.id] = { mesh, glow, material, glowMaterial, data: agent };
+            scene.add(mesh);
+            scene.add(glow);
+        });
+
+        const edgeMeshes = {};
+        edges.forEach(([fromId, toId]) => {
+            const from = agents.find(a => a.id === fromId);
+            const to = agents.find(a => a.id === toId);
+            const geometry = new THREE.BufferGeometry().setFromPoints([from.position, to.position]);
+            const material = new THREE.LineBasicMaterial({ color: 0x1a2a3a, transparent: true, opacity: 0.4 });
+            const line = new THREE.Line(geometry, material);
+            edgeMeshes[`${fromId}-${toId}`] = { line, material, activated: false };
+            scene.add(line);
+        });
+
+        const particleGeometry = new THREE.IcosahedronGeometry(0.12, 0);
+        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        const flowParticle = new THREE.Mesh(particleGeometry, particleMaterial);
+        flowParticle.visible = false;
+        scene.add(flowParticle);
+
+        let flowMode = 'auto', animationSpeed = 1, nodeDelay = 3, currentFlowIndex = 0, flowProgress = 0, isTransitioning = false, lastTime = 0;
+
+        const btnPause = document.getElementById('btn-pause'), btnAuto = document.getElementById('btn-auto'), btnManual = document.getElementById('btn-manual');
+        const stepControls = document.getElementById('step-controls'), btnReset = document.getElementById('btn-reset'), btnPrev = document.getElementById('btn-prev'), btnNext = document.getElementById('btn-next');
+        const speedSlider = document.getElementById('speed-slider'), speedValue = document.getElementById('speed-value');
+        const delaySlider = document.getElementById('delay-slider'), delayValue = document.getElementById('delay-value');
+        const btnCamManual = document.getElementById('btn-cam-manual'), btnCamAuto = document.getElementById('btn-cam-auto');
+        const statusDot = document.getElementById('status-dot'), statusTitle = document.getElementById('status-title');
+        const currentAgentEl = document.getElementById('current-agent'), nextAgentEl = document.getElementById('next-agent'), currentStepEl = document.getElementById('current-step');
+        const progressPercent = document.getElementById('progress-percent'), progressFill = document.getElementById('progress-fill');
+
+        function setFlowMode(mode) {
+            flowMode = mode;
+            btnPause.classList.toggle('active', mode === 'paused');
+            btnAuto.classList.toggle('active', mode === 'auto');
+            btnManual.classList.toggle('active', mode === 'manual');
+            stepControls.style.display = mode === 'manual' ? 'flex' : 'none';
+            statusDot.classList.toggle('paused', mode === 'paused');
+            statusTitle.textContent = mode === 'paused' ? 'Resting' : mode === 'auto' ? 'Dancing' : 'Stepping';
+        }
+
+        btnPause.addEventListener('click', () => setFlowMode('paused'));
+        btnAuto.addEventListener('click', () => setFlowMode('auto'));
+        btnManual.addEventListener('click', () => setFlowMode('manual'));
+
+        btnReset.addEventListener('click', () => {
+            currentFlowIndex = 0; flowProgress = 0;
+            Object.values(edgeMeshes).forEach(e => { e.activated = false; e.material.color.setHex(0x1a2a3a); e.material.opacity = 0.4; });
+            updateUI();
+        });
+
+        btnPrev.addEventListener('click', () => { if (currentFlowIndex > 0) { currentFlowIndex--; flowProgress = 0; updateUI(); } });
+        btnNext.addEventListener('click', () => { if (currentFlowIndex < agents.length - 1) { activateEdge(flowSequence[currentFlowIndex], flowSequence[currentFlowIndex + 1]); currentFlowIndex++; flowProgress = 0; updateUI(); } });
+
+        speedSlider.addEventListener('input', (e) => { animationSpeed = parseFloat(e.target.value); speedValue.textContent = animationSpeed.toFixed(1) + '×'; });
+        delaySlider.addEventListener('input', (e) => { nodeDelay = parseFloat(e.target.value); delayValue.textContent = nodeDelay.toFixed(1) + 's'; });
+        btnCamManual.addEventListener('click', () => { controls.autoRotate = false; btnCamManual.classList.add('active'); btnCamAuto.classList.remove('active'); });
+        btnCamAuto.addEventListener('click', () => { controls.autoRotate = true; controls.autoRotateSpeed = 0.5; btnCamAuto.classList.add('active'); btnCamManual.classList.remove('active'); });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); if (flowMode === 'manual') btnNext.click(); else setFlowMode(flowMode === 'paused' ? 'auto' : 'paused'); }
+            else if (e.code === 'ArrowRight' && flowMode === 'manual') btnNext.click();
+            else if (e.code === 'ArrowLeft' && flowMode === 'manual') btnPrev.click();
+            else if (e.code === 'KeyR') btnReset.click();
+        });
+
+        function activateEdge(fromId, toId) { const key = `${fromId}-${toId}`; if (edgeMeshes[key]) edgeMeshes[key].activated = true; }
+
+        function updateUI() {
+            const currentAgent = agents[currentFlowIndex], nextAgent = agents[(currentFlowIndex + 1) % agents.length];
+            currentAgentEl.textContent = currentAgent.name; nextAgentEl.textContent = nextAgent.name;
+            currentStepEl.textContent = `${currentFlowIndex + 1} / ${agents.length}`;
+            const progress = (currentFlowIndex / (agents.length - 1)) * 100;
+            progressPercent.textContent = Math.round(progress) + '%'; progressFill.style.width = progress + '%';
+            agents.forEach((_, i) => {
+                const node = document.getElementById(`path-${i}`), arrow = document.getElementById(`arrow-${i}`);
+                node.classList.remove('active', 'visited'); if (arrow) arrow.classList.remove('active');
+                if (i < currentFlowIndex) { node.classList.add('visited'); if (arrow) arrow.classList.add('active'); }
+                else if (i === currentFlowIndex) node.classList.add('active');
+            });
+            btnPrev.disabled = currentFlowIndex === 0; btnNext.disabled = currentFlowIndex >= agents.length - 1;
+        }
+
+        function highlightNode(nodeId, active) {
+            const mesh = agentMeshes[nodeId];
+            if (mesh) { mesh.material.emissiveIntensity = active ? 0.9 : 0.4; mesh.mesh.scale.setScalar(active ? 1.3 : 1); mesh.glow.scale.setScalar(active ? 1.5 : 1); mesh.glowMaterial.opacity = active ? 0.4 : 0.2; }
+        }
+
+        let time = 0;
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            const deltaTime = (currentTime - lastTime) / 1000; lastTime = currentTime; time += 0.008;
+
+            // Animate aurora lights
+            greenLight.position.x = 15 + Math.sin(time) * 5;
+            greenLight.intensity = 1.5 + Math.sin(time * 2) * 0.3;
+            cyanLight.position.z = -10 + Math.cos(time * 0.8) * 8;
+            purpleLight.position.y = 10 + Math.sin(time * 1.2) * 3;
+
+            Object.entries(edgeMeshes).forEach(([key, edge]) => { if (edge.activated) { edge.material.color.setHex(0x00ffcc); edge.material.opacity = 0.5 + Math.sin(time * 2) * 0.2; } });
+
+            if (flowMode === 'auto' && deltaTime < 0.1) {
+                flowProgress += deltaTime * animationSpeed;
+                const currentNodeId = flowSequence[currentFlowIndex], nextNodeId = flowSequence[(currentFlowIndex + 1) % flowSequence.length];
+                agents.forEach(a => highlightNode(a.id, false)); highlightNode(currentNodeId, true);
+
+                if (flowProgress < nodeDelay) { flowParticle.visible = false; isTransitioning = false; }
+                else if (flowProgress < nodeDelay + 1) {
+                    if (!isTransitioning) { isTransitioning = true; activateEdge(currentNodeId, nextNodeId); }
+                    const t = flowProgress - nodeDelay;
+                    flowParticle.position.lerpVectors(agents.find(a => a.id === currentNodeId).position, agents.find(a => a.id === nextNodeId).position, t);
+                    flowParticle.visible = true; particleMaterial.color.setHex(agents.find(a => a.id === nextNodeId).color);
+                } else { if (currentFlowIndex < agents.length - 1) { currentFlowIndex++; flowProgress = 0; updateUI(); } else flowProgress = nodeDelay; }
+            } else { agents.forEach(a => highlightNode(a.id, false)); highlightNode(flowSequence[currentFlowIndex], true); flowParticle.visible = false; }
+
+            Object.values(agentMeshes).forEach((mesh, i) => {
+                mesh.mesh.rotation.y = time * 0.3 + i;
+                mesh.mesh.rotation.x = Math.sin(time * 0.5 + i) * 0.2;
+                mesh.glow.rotation.y = -time * 0.2 + i;
+                mesh.mesh.position.y = mesh.data.position.y + Math.sin(time * 1.2 + i * 0.8) * 0.1;
+                mesh.glow.position.y = mesh.mesh.position.y;
+            });
+
+            controls.update(); renderer.render(scene, camera);
+        }
+
+        updateUI(); animate(0);
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    </script>
+</body>
+</html>

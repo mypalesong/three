@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Cyberpunk - MAS Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-card: rgba(20, 20, 40, 0.85);
+            --border-color: rgba(0, 255, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --neon-cyan: #00ffff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #ffff00;
+            --neon-green: #00ff88;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #canvas-container { width: 100vw; height: 100vh; }
+
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(15, 15, 26, 0.95), transparent);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--neon-cyan);
+            text-decoration: none;
+            font-size: 13px;
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+
+        .control-panel {
+            position: fixed;
+            top: 80px;
+            left: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 20px;
+            backdrop-filter: blur(20px);
+            width: 280px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1), inset 0 0 20px rgba(0, 255, 255, 0.05);
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        .btn-group { display: flex; gap: 6px; }
+
+        .btn {
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-primary);
+            border-radius: 2px;
+            font-size: 11px;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(255, 0, 255, 0.3));
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .slider-row { margin-top: 12px; }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 8px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .slider-label span:first-child { color: var(--text-secondary); letter-spacing: 1px; }
+        .slider-label span:last-child { color: var(--neon-cyan); text-shadow: 0 0 5px var(--neon-cyan); }
+
+        .slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(0, 255, 255, 0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--neon-cyan);
+            border-radius: 2px;
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        .step-controls { display: flex; gap: 8px; margin-top: 12px; }
+
+        .step-btn {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--neon-cyan);
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-btn:hover:not(:disabled) {
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .step-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .step-btn.primary {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(255, 0, 255, 0.3));
+            border-color: var(--neon-magenta);
+        }
+
+        .step-btn svg { width: 18px; height: 18px; }
+
+        .status-panel {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 20px;
+            backdrop-filter: blur(20px);
+            width: 260px;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.1);
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--neon-green);
+            box-shadow: 0 0 15px var(--neon-green);
+            animation: neonPulse 1.5s ease-in-out infinite;
+        }
+
+        .status-dot.paused { background: var(--neon-yellow); box-shadow: 0 0 15px var(--neon-yellow); animation: none; }
+
+        @keyframes neonPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .status-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 12px;
+        }
+
+        .status-label { color: var(--text-secondary); }
+        .status-value { font-weight: 500; font-family: 'Orbitron', sans-serif; font-size: 11px; }
+        .status-value.highlight { color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan); }
+
+        .progress-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+            box-shadow: 0 0 10px var(--neon-cyan);
+            transition: width 0.5s ease;
+        }
+
+        .flow-history {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 16px 20px;
+            backdrop-filter: blur(20px);
+        }
+
+        .history-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            color: var(--neon-magenta);
+            text-shadow: 0 0 10px var(--neon-magenta);
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+
+        .history-nodes {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .history-node {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 2px;
+            font-size: 11px;
+            opacity: 0.4;
+            transition: all 0.3s;
+        }
+
+        .history-node.visited {
+            opacity: 1;
+            border-color: var(--neon-green);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .history-node.active {
+            opacity: 1;
+            border-color: var(--neon-cyan);
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .history-arrow {
+            color: var(--neon-cyan);
+            font-size: 14px;
+            opacity: 0.3;
+        }
+
+        .history-arrow.active { opacity: 1; text-shadow: 0 0 10px var(--neon-cyan); }
+
+        .node-dot { width: 8px; height: 8px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="header">
+        <a href="../index.html" class="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            EXIT
+        </a>
+        <div class="title">NEON_CYBERPUNK_v2.0</div>
+        <div></div>
+    </div>
+
+    <div class="control-panel">
+        <div class="panel-section">
+            <div class="section-title">// FLOW CONTROL</div>
+            <div class="btn-group">
+                <button class="btn" id="btn-pause">PAUSE</button>
+                <button class="btn active" id="btn-auto">AUTO</button>
+                <button class="btn" id="btn-manual">MANUAL</button>
+            </div>
+            <div class="step-controls" id="step-controls" style="display: none;">
+                <button class="step-btn" id="btn-reset">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                    </svg>
+                </button>
+                <button class="step-btn" id="btn-prev">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <button class="step-btn primary" id="btn-next">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="section-title">// TIMING</div>
+            <div class="slider-row">
+                <div class="slider-label"><span>SPEED</span><span id="speed-value">1.0x</span></div>
+                <input type="range" class="slider" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+                <div class="slider-label"><span>DELAY</span><span id="delay-value">3.0s</span></div>
+                <input type="range" class="slider" id="delay-slider" min="1" max="10" step="0.5" value="3">
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="section-title">// CAMERA</div>
+            <div class="btn-group">
+                <button class="btn active" id="btn-cam-manual">MANUAL</button>
+                <button class="btn" id="btn-cam-auto">AUTO</button>
+            </div>
+            <div class="slider-row" id="cam-speed-row" style="opacity: 0.4; pointer-events: none;">
+                <div class="slider-label"><span>ROT_SPEED</span><span id="cam-speed-value">1.0x</span></div>
+                <input type="range" class="slider" id="cam-speed-slider" min="0.1" max="10" step="0.1" value="1">
+            </div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-header">
+            <div class="status-dot" id="status-dot"></div>
+            <span class="status-title" id="status-title">SYSTEM_ACTIVE</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">Current Node</span>
+            <span class="status-value highlight" id="current-agent">INPUT</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">Next Node</span>
+            <span class="status-value" id="next-agent">ORCHESTRATOR</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">Step</span>
+            <span class="status-value" id="current-step">1 / 7</span>
+        </div>
+        <div class="progress-section">
+            <div class="slider-label"><span>PROGRESS</span><span id="progress-percent">0%</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+        </div>
+    </div>
+
+    <div class="flow-history">
+        <div class="history-title">// EXECUTION_PATH</div>
+        <div class="history-nodes" id="history-nodes"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f0f1a);
+        scene.fog = new THREE.Fog(0x0f0f1a, 20, 60);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(12, 10, 14);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 8;
+        controls.maxDistance = 40;
+
+        // Enhanced lighting
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+        scene.add(ambientLight);
+
+        const cyanLight = new THREE.PointLight(0x00ffff, 2, 50);
+        cyanLight.position.set(15, 15, 15);
+        scene.add(cyanLight);
+
+        const magentaLight = new THREE.PointLight(0xff00ff, 1.5, 50);
+        magentaLight.position.set(-15, 10, -15);
+        scene.add(magentaLight);
+
+        const yellowLight = new THREE.PointLight(0xffff00, 1, 40);
+        yellowLight.position.set(0, -10, 0);
+        scene.add(yellowLight);
+
+        // Grid with neon effect
+        const gridHelper = new THREE.GridHelper(40, 40, 0x00ffff, 0x1a1a3a);
+        gridHelper.position.y = -5;
+        gridHelper.material.opacity = 0.3;
+        gridHelper.material.transparent = true;
+        scene.add(gridHelper);
+
+        // Agents
+        const agents = [
+            { id: 'input', name: 'INPUT', position: new THREE.Vector3(0, 4, 0), color: 0x00ffff },
+            { id: 'orchestrator', name: 'ORCHESTRATOR', position: new THREE.Vector3(0, 1.5, 0), color: 0xff00ff },
+            { id: 'planner', name: 'PLANNER', position: new THREE.Vector3(5, 0, 3), color: 0xffff00 },
+            { id: 'executor', name: 'EXECUTOR', position: new THREE.Vector3(4, -1, -4), color: 0x00ff88 },
+            { id: 'validator', name: 'VALIDATOR', position: new THREE.Vector3(-4, -1, -4), color: 0xff8800 },
+            { id: 'memory', name: 'MEMORY', position: new THREE.Vector3(-5, 0, 3), color: 0x8888ff },
+            { id: 'output', name: 'OUTPUT', position: new THREE.Vector3(0, -3.5, 0), color: 0x00ffff }
+        ];
+
+        const flowSequence = agents.map(a => a.id);
+        const edges = [
+            ['input', 'orchestrator'],
+            ['orchestrator', 'planner'],
+            ['planner', 'executor'],
+            ['executor', 'validator'],
+            ['validator', 'memory'],
+            ['memory', 'orchestrator'],
+            ['orchestrator', 'output']
+        ];
+
+        // Create history UI
+        const historyNodes = document.getElementById('history-nodes');
+        agents.forEach((agent, i) => {
+            const node = document.createElement('div');
+            node.className = 'history-node';
+            node.id = `history-${i}`;
+            node.innerHTML = `<div class="node-dot" style="background: #${agent.color.toString(16).padStart(6, '0')}; box-shadow: 0 0 8px #${agent.color.toString(16).padStart(6, '0')}"></div><span>${agent.name}</span>`;
+            historyNodes.appendChild(node);
+
+            if (i < agents.length - 1) {
+                const arrow = document.createElement('span');
+                arrow.className = 'history-arrow';
+                arrow.id = `arrow-${i}`;
+                arrow.textContent = '→';
+                historyNodes.appendChild(arrow);
+            }
+        });
+
+        // Create agent meshes
+        const agentMeshes = {};
+        agents.forEach(agent => {
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: agent.color,
+                metalness: 0.3,
+                roughness: 0.1,
+                emissive: agent.color,
+                emissiveIntensity: 0.4,
+                transparent: true,
+                opacity: 0.9
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(agent.position);
+
+            const glowGeometry = new THREE.SphereGeometry(0.7, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: agent.color,
+                transparent: true,
+                opacity: 0.2
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.copy(agent.position);
+
+            const ringGeometry = new THREE.RingGeometry(0.6, 0.7, 6);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: agent.color,
+                transparent: true,
+                opacity: 0.4,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.copy(agent.position);
+            ring.rotation.x = Math.PI / 2;
+
+            agentMeshes[agent.id] = { sphere, glow, ring, material, glowMaterial, ringMaterial, data: agent };
+            scene.add(sphere);
+            scene.add(glow);
+            scene.add(ring);
+        });
+
+        // Create edges
+        const edgeMeshes = {};
+        edges.forEach(([fromId, toId]) => {
+            const from = agents.find(a => a.id === fromId);
+            const to = agents.find(a => a.id === toId);
+            const points = [from.position, to.position];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0x2a2a4a, transparent: true, opacity: 0.4 });
+            const line = new THREE.Line(geometry, material);
+            edgeMeshes[`${fromId}-${toId}`] = { line, material, activated: false };
+            scene.add(line);
+        });
+
+        // Flow particle
+        const particleGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.95 });
+        const flowParticle = new THREE.Mesh(particleGeometry, particleMaterial);
+        flowParticle.visible = false;
+        scene.add(flowParticle);
+
+        // State
+        let flowMode = 'auto';
+        let animationSpeed = 1;
+        let nodeDelay = 3;
+        let currentFlowIndex = 0;
+        let flowProgress = 0;
+        let isTransitioning = false;
+        let lastTime = 0;
+        let visitedNodes = new Set();
+        let activatedEdges = new Set();
+
+        // UI Elements
+        const btnPause = document.getElementById('btn-pause');
+        const btnAuto = document.getElementById('btn-auto');
+        const btnManual = document.getElementById('btn-manual');
+        const stepControls = document.getElementById('step-controls');
+        const btnReset = document.getElementById('btn-reset');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const delaySlider = document.getElementById('delay-slider');
+        const delayValue = document.getElementById('delay-value');
+        const btnCamManual = document.getElementById('btn-cam-manual');
+        const btnCamAuto = document.getElementById('btn-cam-auto');
+        const camSpeedRow = document.getElementById('cam-speed-row');
+        const camSpeedSlider = document.getElementById('cam-speed-slider');
+        const camSpeedValue = document.getElementById('cam-speed-value');
+
+        const statusDot = document.getElementById('status-dot');
+        const statusTitle = document.getElementById('status-title');
+        const currentAgentEl = document.getElementById('current-agent');
+        const nextAgentEl = document.getElementById('next-agent');
+        const currentStepEl = document.getElementById('current-step');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressFill = document.getElementById('progress-fill');
+
+        function setFlowMode(mode) {
+            flowMode = mode;
+            btnPause.classList.toggle('active', mode === 'paused');
+            btnAuto.classList.toggle('active', mode === 'auto');
+            btnManual.classList.toggle('active', mode === 'manual');
+            stepControls.style.display = mode === 'manual' ? 'flex' : 'none';
+            statusDot.classList.toggle('paused', mode === 'paused');
+            statusTitle.textContent = mode === 'paused' ? 'SYSTEM_PAUSED' : mode === 'auto' ? 'SYSTEM_ACTIVE' : 'MANUAL_MODE';
+        }
+
+        btnPause.addEventListener('click', () => setFlowMode('paused'));
+        btnAuto.addEventListener('click', () => setFlowMode('auto'));
+        btnManual.addEventListener('click', () => setFlowMode('manual'));
+
+        btnReset.addEventListener('click', () => {
+            currentFlowIndex = 0;
+            flowProgress = 0;
+            visitedNodes.clear();
+            activatedEdges.clear();
+            Object.values(edgeMeshes).forEach(e => { e.activated = false; e.material.color.setHex(0x2a2a4a); e.material.opacity = 0.4; });
+            updateUI();
+        });
+
+        btnPrev.addEventListener('click', () => {
+            if (currentFlowIndex > 0) { currentFlowIndex--; flowProgress = 0; updateUI(); }
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (currentFlowIndex < agents.length - 1) {
+                const fromId = flowSequence[currentFlowIndex];
+                const toId = flowSequence[currentFlowIndex + 1];
+                visitedNodes.add(fromId);
+                activateEdge(fromId, toId);
+                currentFlowIndex++;
+                flowProgress = 0;
+                updateUI();
+            }
+        });
+
+        speedSlider.addEventListener('input', (e) => { animationSpeed = parseFloat(e.target.value); speedValue.textContent = animationSpeed.toFixed(1) + 'x'; });
+        delaySlider.addEventListener('input', (e) => { nodeDelay = parseFloat(e.target.value); delayValue.textContent = nodeDelay.toFixed(1) + 's'; });
+
+        btnCamManual.addEventListener('click', () => {
+            controls.autoRotate = false;
+            btnCamManual.classList.add('active');
+            btnCamAuto.classList.remove('active');
+            camSpeedRow.style.opacity = '0.4';
+            camSpeedRow.style.pointerEvents = 'none';
+        });
+
+        btnCamAuto.addEventListener('click', () => {
+            controls.autoRotate = true;
+            btnCamAuto.classList.add('active');
+            btnCamManual.classList.remove('active');
+            camSpeedRow.style.opacity = '1';
+            camSpeedRow.style.pointerEvents = 'auto';
+        });
+
+        camSpeedSlider.addEventListener('input', (e) => {
+            const speed = parseFloat(e.target.value);
+            controls.autoRotateSpeed = speed * 2;
+            camSpeedValue.textContent = speed.toFixed(1) + 'x';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); if (flowMode === 'manual') btnNext.click(); else setFlowMode(flowMode === 'paused' ? 'auto' : 'paused'); }
+            else if (e.code === 'ArrowRight' && flowMode === 'manual') btnNext.click();
+            else if (e.code === 'ArrowLeft' && flowMode === 'manual') btnPrev.click();
+            else if (e.code === 'KeyR') btnReset.click();
+        });
+
+        function activateEdge(fromId, toId) {
+            const key = `${fromId}-${toId}`;
+            if (edgeMeshes[key]) {
+                edgeMeshes[key].activated = true;
+                activatedEdges.add(key);
+            }
+        }
+
+        function updateUI() {
+            const currentAgent = agents[currentFlowIndex];
+            const nextIndex = (currentFlowIndex + 1) % agents.length;
+            const nextAgent = agents[nextIndex];
+
+            currentAgentEl.textContent = currentAgent.name;
+            nextAgentEl.textContent = nextAgent.name;
+            currentStepEl.textContent = `${currentFlowIndex + 1} / ${agents.length}`;
+
+            const progress = (currentFlowIndex / (agents.length - 1)) * 100;
+            progressPercent.textContent = Math.round(progress) + '%';
+            progressFill.style.width = progress + '%';
+
+            // Update history
+            agents.forEach((_, i) => {
+                const node = document.getElementById(`history-${i}`);
+                const arrow = document.getElementById(`arrow-${i}`);
+                node.classList.remove('active', 'visited');
+                if (arrow) arrow.classList.remove('active');
+
+                if (i < currentFlowIndex) {
+                    node.classList.add('visited');
+                    if (arrow) arrow.classList.add('active');
+                } else if (i === currentFlowIndex) {
+                    node.classList.add('active');
+                }
+            });
+
+            btnPrev.disabled = currentFlowIndex === 0;
+            btnNext.disabled = currentFlowIndex >= agents.length - 1;
+        }
+
+        function highlightNode(nodeId, active) {
+            const mesh = agentMeshes[nodeId];
+            if (mesh) {
+                if (active) {
+                    mesh.material.emissiveIntensity = 1;
+                    mesh.glowMaterial.opacity = 0.5;
+                    mesh.sphere.scale.setScalar(1.3);
+                    mesh.glow.scale.setScalar(1.5);
+                } else {
+                    mesh.material.emissiveIntensity = 0.4;
+                    mesh.glowMaterial.opacity = 0.2;
+                    mesh.sphere.scale.setScalar(1);
+                    mesh.glow.scale.setScalar(1);
+                }
+            }
+        }
+
+        let time = 0;
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            time += 0.01;
+
+            // Update edge visuals - keep activated edges highlighted
+            Object.entries(edgeMeshes).forEach(([key, edge]) => {
+                if (edge.activated) {
+                    edge.material.color.setHex(0x00ffff);
+                    edge.material.opacity = 0.8 + Math.sin(time * 3) * 0.2;
+                }
+            });
+
+            if (flowMode === 'auto' && deltaTime < 0.1) {
+                flowProgress += deltaTime * animationSpeed;
+
+                const currentNodeId = flowSequence[currentFlowIndex];
+                const nextIndex = (currentFlowIndex + 1) % flowSequence.length;
+                const nextNodeId = flowSequence[nextIndex];
+
+                agents.forEach(a => highlightNode(a.id, false));
+                highlightNode(currentNodeId, true);
+
+                if (flowProgress < nodeDelay) {
+                    flowParticle.visible = false;
+                    isTransitioning = false;
+                } else if (flowProgress < nodeDelay + 1) {
+                    if (!isTransitioning) {
+                        isTransitioning = true;
+                        visitedNodes.add(currentNodeId);
+                        activateEdge(currentNodeId, nextNodeId);
+                    }
+
+                    const t = (flowProgress - nodeDelay);
+                    const from = agents.find(a => a.id === currentNodeId).position;
+                    const to = agents.find(a => a.id === nextNodeId).position;
+                    flowParticle.position.lerpVectors(from, to, t);
+                    flowParticle.visible = true;
+
+                    const targetAgent = agents.find(a => a.id === nextNodeId);
+                    particleMaterial.color.setHex(targetAgent.color);
+                } else {
+                    if (currentFlowIndex < agents.length - 1) {
+                        currentFlowIndex++;
+                        flowProgress = 0;
+                        updateUI();
+                    } else {
+                        flowProgress = nodeDelay;
+                    }
+                }
+            } else if (flowMode === 'manual' || flowMode === 'paused') {
+                agents.forEach(a => highlightNode(a.id, false));
+                highlightNode(flowSequence[currentFlowIndex], true);
+                flowParticle.visible = false;
+            }
+
+            // Animate rings
+            Object.values(agentMeshes).forEach((mesh, i) => {
+                mesh.ring.rotation.z = time + i * 0.5;
+                mesh.sphere.position.y = mesh.data.position.y + Math.sin(time * 2 + i * 0.5) * 0.05;
+                mesh.glow.position.y = mesh.sphere.position.y;
+                mesh.ring.position.y = mesh.sphere.position.y;
+            });
+
+            // Animate lights
+            cyanLight.intensity = 2 + Math.sin(time * 2) * 0.5;
+            magentaLight.intensity = 1.5 + Math.sin(time * 1.5 + 1) * 0.3;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        updateUI();
+        animate(0);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

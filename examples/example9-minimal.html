@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Light - MAS Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.08);
+            --text-primary: #1a1a2e;
+            --text-secondary: #6b7280;
+            --accent: #2563eb;
+            --accent-light: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        #canvas-container { width: 100vw; height: 100vh; }
+
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: rgba(248, 249, 250, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover { color: var(--text-primary); }
+
+        .title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+
+        .control-panel {
+            position: fixed;
+            top: 80px;
+            left: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            width: 280px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .panel-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            color: var(--text-secondary);
+        }
+
+        .btn-group { display: flex; gap: 8px; }
+
+        .btn {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-primary);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .btn:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+        .btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .slider-row { margin-top: 14px; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
+        .slider-label span:first-child { color: var(--text-secondary); }
+        .slider-label span:last-child { color: var(--accent); font-weight: 600; }
+
+        .slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+        }
+
+        .step-controls { display: flex; gap: 10px; margin-top: 14px; }
+
+        .step-btn {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-btn:hover:not(:disabled) { background: #f3f4f6; color: var(--text-primary); }
+        .step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .step-btn.primary { flex: 1; background: var(--accent); border-color: var(--accent); color: white; }
+        .step-btn svg { width: 18px; height: 18px; }
+
+        .status-panel {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            width: 260px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .status-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .status-dot.paused { background: var(--warning); }
+
+        .status-title { font-size: 14px; font-weight: 600; }
+        .status-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 13px; border-bottom: 1px solid var(--border-color); }
+        .status-row:last-of-type { border-bottom: none; }
+        .status-label { color: var(--text-secondary); }
+        .status-value { font-weight: 500; }
+        .status-value.highlight { color: var(--accent); }
+
+        .progress-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border-color); }
+        .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 12px; }
+        .progress-fill { height: 100%; background: var(--accent); transition: width 0.5s ease; }
+
+        .flow-path {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 18px 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .path-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 14px; }
+        .path-nodes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .path-node {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            opacity: 0.5;
+            transition: all 0.2s;
+        }
+
+        .path-node.visited { opacity: 1; background: #ecfdf5; border-color: var(--success); color: var(--success); }
+        .path-node.active { opacity: 1; background: #eff6ff; border-color: var(--accent); color: var(--accent); box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15); }
+        .path-arrow { color: var(--text-secondary); font-size: 14px; opacity: 0.3; }
+        .path-arrow.active { opacity: 1; color: var(--success); }
+        .node-dot { width: 8px; height: 8px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="header">
+        <a href="../index.html" class="back-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Back</a>
+        <div class="title">Minimal Light</div>
+        <div></div>
+    </div>
+
+    <div class="control-panel">
+        <div class="panel-section">
+            <div class="section-title">Flow Control</div>
+            <div class="btn-group">
+                <button class="btn" id="btn-pause">Pause</button>
+                <button class="btn active" id="btn-auto">Auto</button>
+                <button class="btn" id="btn-manual">Manual</button>
+            </div>
+            <div class="step-controls" id="step-controls" style="display: none;">
+                <button class="step-btn" id="btn-reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+                <button class="step-btn" id="btn-prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="step-btn primary" id="btn-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="section-title">Timing</div>
+            <div class="slider-row">
+                <div class="slider-label"><span>Speed</span><span id="speed-value">1.0x</span></div>
+                <input type="range" class="slider" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
+            </div>
+            <div class="slider-row">
+                <div class="slider-label"><span>Delay</span><span id="delay-value">3.0s</span></div>
+                <input type="range" class="slider" id="delay-slider" min="1" max="10" step="0.5" value="3">
+            </div>
+        </div>
+        <div class="panel-section">
+            <div class="section-title">Camera</div>
+            <div class="btn-group">
+                <button class="btn active" id="btn-cam-manual">Manual</button>
+                <button class="btn" id="btn-cam-auto">Auto Rotate</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-header">
+            <div class="status-dot" id="status-dot"></div>
+            <span class="status-title" id="status-title">Running</span>
+        </div>
+        <div class="status-row"><span class="status-label">Current</span><span class="status-value highlight" id="current-agent">Input</span></div>
+        <div class="status-row"><span class="status-label">Next</span><span class="status-value" id="next-agent">Orchestrator</span></div>
+        <div class="status-row"><span class="status-label">Step</span><span class="status-value" id="current-step">1 / 7</span></div>
+        <div class="progress-section">
+            <div class="slider-label"><span>Progress</span><span id="progress-percent">0%</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+        </div>
+    </div>
+
+    <div class="flow-path">
+        <div class="path-title">Execution Path</div>
+        <div class="path-nodes" id="path-nodes"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f9fa);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(12, 10, 14);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Bright, clean lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1);
+        mainLight.position.set(10, 20, 10);
+        scene.add(mainLight);
+
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        fillLight.position.set(-10, 10, -10);
+        scene.add(fillLight);
+
+        const gridHelper = new THREE.GridHelper(40, 40, 0xd1d5db, 0xf3f4f6);
+        gridHelper.position.y = -5;
+        scene.add(gridHelper);
+
+        const agents = [
+            { id: 'input', name: 'Input', position: new THREE.Vector3(0, 4, 0), color: 0x2563eb },
+            { id: 'orchestrator', name: 'Orchestrator', position: new THREE.Vector3(0, 1.5, 0), color: 0x7c3aed },
+            { id: 'planner', name: 'Planner', position: new THREE.Vector3(5, 0, 3), color: 0x0891b2 },
+            { id: 'executor', name: 'Executor', position: new THREE.Vector3(4, -1, -4), color: 0x059669 },
+            { id: 'validator', name: 'Validator', position: new THREE.Vector3(-4, -1, -4), color: 0xd97706 },
+            { id: 'memory', name: 'Memory', position: new THREE.Vector3(-5, 0, 3), color: 0xdc2626 },
+            { id: 'output', name: 'Output', position: new THREE.Vector3(0, -3.5, 0), color: 0x4f46e5 }
+        ];
+
+        const flowSequence = agents.map(a => a.id);
+        const edges = [['input', 'orchestrator'], ['orchestrator', 'planner'], ['planner', 'executor'], ['executor', 'validator'], ['validator', 'memory'], ['memory', 'orchestrator'], ['orchestrator', 'output']];
+
+        const pathNodes = document.getElementById('path-nodes');
+        agents.forEach((agent, i) => {
+            const node = document.createElement('div');
+            node.className = 'path-node';
+            node.id = `path-${i}`;
+            node.innerHTML = `<div class="node-dot" style="background: #${agent.color.toString(16).padStart(6, '0')}"></div><span>${agent.name}</span>`;
+            pathNodes.appendChild(node);
+            if (i < agents.length - 1) {
+                const arrow = document.createElement('span');
+                arrow.className = 'path-arrow';
+                arrow.id = `arrow-${i}`;
+                arrow.textContent = '→';
+                pathNodes.appendChild(arrow);
+            }
+        });
+
+        const agentMeshes = {};
+        agents.forEach(agent => {
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const material = new THREE.MeshPhysicalMaterial({ color: agent.color, metalness: 0.1, roughness: 0.4, transparent: true, opacity: 0.95 });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(agent.position);
+
+            const ringGeometry = new THREE.RingGeometry(0.6, 0.65, 32);
+            const ringMaterial = new THREE.MeshBasicMaterial({ color: agent.color, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.copy(agent.position);
+            ring.rotation.x = Math.PI / 2;
+
+            agentMeshes[agent.id] = { sphere, ring, material, ringMaterial, data: agent };
+            scene.add(sphere);
+            scene.add(ring);
+        });
+
+        const edgeMeshes = {};
+        edges.forEach(([fromId, toId]) => {
+            const from = agents.find(a => a.id === fromId);
+            const to = agents.find(a => a.id === toId);
+            const geometry = new THREE.BufferGeometry().setFromPoints([from.position, to.position]);
+            const material = new THREE.LineBasicMaterial({ color: 0xe5e7eb, transparent: true, opacity: 0.8 });
+            const line = new THREE.Line(geometry, material);
+            edgeMeshes[`${fromId}-${toId}`] = { line, material, activated: false };
+            scene.add(line);
+        });
+
+        const particleGeometry = new THREE.SphereGeometry(0.12, 16, 16);
+        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0x2563eb });
+        const flowParticle = new THREE.Mesh(particleGeometry, particleMaterial);
+        flowParticle.visible = false;
+        scene.add(flowParticle);
+
+        let flowMode = 'auto', animationSpeed = 1, nodeDelay = 3, currentFlowIndex = 0, flowProgress = 0, isTransitioning = false, lastTime = 0;
+
+        const btnPause = document.getElementById('btn-pause'), btnAuto = document.getElementById('btn-auto'), btnManual = document.getElementById('btn-manual');
+        const stepControls = document.getElementById('step-controls'), btnReset = document.getElementById('btn-reset'), btnPrev = document.getElementById('btn-prev'), btnNext = document.getElementById('btn-next');
+        const speedSlider = document.getElementById('speed-slider'), speedValue = document.getElementById('speed-value');
+        const delaySlider = document.getElementById('delay-slider'), delayValue = document.getElementById('delay-value');
+        const btnCamManual = document.getElementById('btn-cam-manual'), btnCamAuto = document.getElementById('btn-cam-auto');
+        const statusDot = document.getElementById('status-dot'), statusTitle = document.getElementById('status-title');
+        const currentAgentEl = document.getElementById('current-agent'), nextAgentEl = document.getElementById('next-agent'), currentStepEl = document.getElementById('current-step');
+        const progressPercent = document.getElementById('progress-percent'), progressFill = document.getElementById('progress-fill');
+
+        function setFlowMode(mode) {
+            flowMode = mode;
+            btnPause.classList.toggle('active', mode === 'paused');
+            btnAuto.classList.toggle('active', mode === 'auto');
+            btnManual.classList.toggle('active', mode === 'manual');
+            stepControls.style.display = mode === 'manual' ? 'flex' : 'none';
+            statusDot.classList.toggle('paused', mode === 'paused');
+            statusTitle.textContent = mode === 'paused' ? 'Paused' : mode === 'auto' ? 'Running' : 'Manual';
+        }
+
+        btnPause.addEventListener('click', () => setFlowMode('paused'));
+        btnAuto.addEventListener('click', () => setFlowMode('auto'));
+        btnManual.addEventListener('click', () => setFlowMode('manual'));
+
+        btnReset.addEventListener('click', () => {
+            currentFlowIndex = 0; flowProgress = 0;
+            Object.values(edgeMeshes).forEach(e => { e.activated = false; e.material.color.setHex(0xe5e7eb); e.material.opacity = 0.8; });
+            updateUI();
+        });
+
+        btnPrev.addEventListener('click', () => { if (currentFlowIndex > 0) { currentFlowIndex--; flowProgress = 0; updateUI(); } });
+        btnNext.addEventListener('click', () => { if (currentFlowIndex < agents.length - 1) { activateEdge(flowSequence[currentFlowIndex], flowSequence[currentFlowIndex + 1]); currentFlowIndex++; flowProgress = 0; updateUI(); } });
+
+        speedSlider.addEventListener('input', (e) => { animationSpeed = parseFloat(e.target.value); speedValue.textContent = animationSpeed.toFixed(1) + 'x'; });
+        delaySlider.addEventListener('input', (e) => { nodeDelay = parseFloat(e.target.value); delayValue.textContent = nodeDelay.toFixed(1) + 's'; });
+        btnCamManual.addEventListener('click', () => { controls.autoRotate = false; btnCamManual.classList.add('active'); btnCamAuto.classList.remove('active'); });
+        btnCamAuto.addEventListener('click', () => { controls.autoRotate = true; controls.autoRotateSpeed = 2; btnCamAuto.classList.add('active'); btnCamManual.classList.remove('active'); });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); if (flowMode === 'manual') btnNext.click(); else setFlowMode(flowMode === 'paused' ? 'auto' : 'paused'); }
+            else if (e.code === 'ArrowRight' && flowMode === 'manual') btnNext.click();
+            else if (e.code === 'ArrowLeft' && flowMode === 'manual') btnPrev.click();
+            else if (e.code === 'KeyR') btnReset.click();
+        });
+
+        function activateEdge(fromId, toId) { const key = `${fromId}-${toId}`; if (edgeMeshes[key]) edgeMeshes[key].activated = true; }
+
+        function updateUI() {
+            const currentAgent = agents[currentFlowIndex], nextAgent = agents[(currentFlowIndex + 1) % agents.length];
+            currentAgentEl.textContent = currentAgent.name; nextAgentEl.textContent = nextAgent.name;
+            currentStepEl.textContent = `${currentFlowIndex + 1} / ${agents.length}`;
+            const progress = (currentFlowIndex / (agents.length - 1)) * 100;
+            progressPercent.textContent = Math.round(progress) + '%'; progressFill.style.width = progress + '%';
+            agents.forEach((_, i) => {
+                const node = document.getElementById(`path-${i}`), arrow = document.getElementById(`arrow-${i}`);
+                node.classList.remove('active', 'visited'); if (arrow) arrow.classList.remove('active');
+                if (i < currentFlowIndex) { node.classList.add('visited'); if (arrow) arrow.classList.add('active'); }
+                else if (i === currentFlowIndex) node.classList.add('active');
+            });
+            btnPrev.disabled = currentFlowIndex === 0; btnNext.disabled = currentFlowIndex >= agents.length - 1;
+        }
+
+        function highlightNode(nodeId, active) {
+            const mesh = agentMeshes[nodeId];
+            if (mesh) { mesh.sphere.scale.setScalar(active ? 1.2 : 1); mesh.ringMaterial.opacity = active ? 0.6 : 0.3; mesh.ring.scale.setScalar(active ? 1.3 : 1); }
+        }
+
+        let time = 0;
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            const deltaTime = (currentTime - lastTime) / 1000; lastTime = currentTime; time += 0.01;
+
+            Object.entries(edgeMeshes).forEach(([key, edge]) => { if (edge.activated) { edge.material.color.setHex(0x10b981); edge.material.opacity = 1; } });
+
+            if (flowMode === 'auto' && deltaTime < 0.1) {
+                flowProgress += deltaTime * animationSpeed;
+                const currentNodeId = flowSequence[currentFlowIndex], nextNodeId = flowSequence[(currentFlowIndex + 1) % flowSequence.length];
+                agents.forEach(a => highlightNode(a.id, false)); highlightNode(currentNodeId, true);
+
+                if (flowProgress < nodeDelay) { flowParticle.visible = false; isTransitioning = false; }
+                else if (flowProgress < nodeDelay + 1) {
+                    if (!isTransitioning) { isTransitioning = true; activateEdge(currentNodeId, nextNodeId); }
+                    const t = flowProgress - nodeDelay;
+                    flowParticle.position.lerpVectors(agents.find(a => a.id === currentNodeId).position, agents.find(a => a.id === nextNodeId).position, t);
+                    flowParticle.visible = true; particleMaterial.color.setHex(agents.find(a => a.id === nextNodeId).color);
+                } else { if (currentFlowIndex < agents.length - 1) { currentFlowIndex++; flowProgress = 0; updateUI(); } else flowProgress = nodeDelay; }
+            } else { agents.forEach(a => highlightNode(a.id, false)); highlightNode(flowSequence[currentFlowIndex], true); flowParticle.visible = false; }
+
+            Object.values(agentMeshes).forEach((mesh, i) => { mesh.ring.rotation.z = time + i * 0.3; });
+            controls.update(); renderer.render(scene, camera);
+        }
+
+        updateUI(); animate(0);
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    </script>
+</body>
+</html>
